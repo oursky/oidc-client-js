@@ -12,6 +12,7 @@ import { SigninRequest } from './SigninRequest.js';
 
 const DefaultAccessTokenExpiringNotificationTime = 60;
 const DefaultCheckSessionInterval = 2000;
+const DefaultPauseSilentRenewIdleTimeout = 60 * 1000;
 
 export class UserManagerSettings extends OidcClientSettings {
     constructor({
@@ -22,6 +23,7 @@ export class UserManagerSettings extends OidcClientSettings {
         silent_redirect_uri,
         silentRequestTimeout,
         automaticSilentRenew = false,
+        pauseSilentRenewIdleTimeout = DefaultPauseSilentRenewIdleTimeout,
         validateSubOnSilentRenew = false,
         includeIdTokenInSilentRenew = true,
         monitorSession = true,
@@ -46,6 +48,7 @@ export class UserManagerSettings extends OidcClientSettings {
         this._silent_redirect_uri = silent_redirect_uri;
         this._silentRequestTimeout = silentRequestTimeout;
         this._automaticSilentRenew = automaticSilentRenew;
+        this._pauseSilentRenewIdleTimeout = pauseSilentRenewIdleTimeout;
         this._validateSubOnSilentRenew = validateSubOnSilentRenew;
         this._includeIdTokenInSilentRenew = includeIdTokenInSilentRenew;
         this._accessTokenExpiringNotificationTime = accessTokenExpiringNotificationTime;
@@ -56,7 +59,7 @@ export class UserManagerSettings extends OidcClientSettings {
         this._stopCheckSessionOnError = stopCheckSessionOnError;
         if (query_status_response_type) {
             this._query_status_response_type = query_status_response_type;
-        } 
+        }
         else if (arguments[0] && arguments[0].response_type) {
             this._query_status_response_type = SigninRequest.isOidc(arguments[0].response_type) ? "id_token" : "code";
         }
@@ -93,6 +96,9 @@ export class UserManagerSettings extends OidcClientSettings {
     }
     get automaticSilentRenew() {
         return this._automaticSilentRenew;
+    }
+    get pauseSilentRenewIdleTimeout() {
+        return this._pauseSilentRenewIdleTimeout;
     }
     get validateSubOnSilentRenew() {
         return this._validateSubOnSilentRenew;

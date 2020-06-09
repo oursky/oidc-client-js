@@ -5,14 +5,24 @@ import { Log } from './Log.js';
 
 export class SilentRenewService {
 
-    constructor(userManager) {
+    constructor(userManager, idleTimerCtor) {
         this._userManager = userManager;
+        this._idleTimerCtor = idleTimerCtor;
+        this._initState();
+    }
+
+    _initState() {
+        this._paused = false;
+        this._expiringDuringPaused = false;
     }
 
     start() {
-        if (!this._callback) {
+        if (!this._callback && !this._expiredCallback) {
+            this._initState();
             this._callback = this._tokenExpiring.bind(this);
+            this._expiredCallback = this._tokenExpired.bind(this);
             this._userManager.events.addAccessTokenExpiring(this._callback);
+            this._userManager.events.addAccessTokenExpired(this._expiredCallback);
 
             // this will trigger loading of the user so the expiring events can be initialized
             this._userManager.getUser().then(user=>{
@@ -21,17 +31,49 @@ export class SilentRenewService {
                 // catch to suppress errors since we're in a ctor
                 Log.error("SilentRenewService.start: Error from getUser:", err.message);
             });
+
+            this._idleTimer = this._idleTimerCtor(() => {
+                // on idle
+                this._paused = true;
+            }, () => {
+                // on active
+                this._paused = false;
+                if (this._expiringDuringPaused) {
+                    this._expiringDuringPaused = false;
+                    this._renew();
+                }
+            });
         }
     }
 
     stop() {
         if (this._callback) {
             this._userManager.events.removeAccessTokenExpiring(this._callback);
+            this._userManager.events.removeAccessTokenExpired(this._expiredCallback);
             delete this._callback;
+            delete this._expiredCallback;
+
+            this._idleTimer.unbind();
+            delete this._idleTimer;
         }
     }
 
     _tokenExpiring() {
+        // TODO: retry once user is active again
+        if (this._paused) {
+            Log.debug("SilentRenewService._tokenExpiring: skipped, user idle detected");
+            this._expiringDuringPaused = true;
+            return;
+        }
+
+        this._renew();
+    }
+
+    _tokenExpired() {
+        this._expiringDuringPaused = false;
+    }
+
+    _renew() {
         this._userManager.signinSilent().then(user => {
             Log.debug("SilentRenewService._tokenExpiring: Silent token renewal successful");
         }, err => {

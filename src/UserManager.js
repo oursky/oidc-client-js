@@ -11,6 +11,7 @@ import { SessionMonitor } from './SessionMonitor.js';
 import { TokenRevocationClient } from './TokenRevocationClient.js';
 import { TokenClient } from './TokenClient.js';
 import { JoseUtil } from './JoseUtil.js';
+import { IdleTimer } from './IdleTimer';
 
 
 export class UserManager extends OidcClient {
@@ -28,7 +29,7 @@ export class UserManager extends OidcClient {
         super(settings);
 
         this._events = new UserManagerEvents(settings);
-        this._silentRenewService = new SilentRenewServiceCtor(this);
+        this._silentRenewService = new SilentRenewServiceCtor(this, IdleTimer(settings.pauseSilentRenewIdleTimeout));
 
         // order is important for the following properties; these services depend upon the events.
         if (this.settings.automaticSilentRenew) {
@@ -242,7 +243,7 @@ export class UserManager extends OidcClient {
             });
         });
     }
-    
+
     _signinSilentIframe(args = {}) {
         let url = args.redirect_uri || this.settings.silent_redirect_uri || this.settings.redirect_uri;
         if (!url) {
@@ -352,9 +353,9 @@ export class UserManager extends OidcClient {
             })
             .catch(err => {
                 if (err.session_state && this.settings.monitorAnonymousSession) {
-                    if (err.message == "login_required" || 
-                        err.message == "consent_required" || 
-                        err.message == "interaction_required" || 
+                    if (err.message == "login_required" ||
+                        err.message == "consent_required" ||
+                        err.message == "interaction_required" ||
                         err.message == "account_selection_required"
                     ) {
                         Log.info("UserManager.querySessionStatus: querySessionStatus success for anonymous user");
@@ -569,7 +570,7 @@ export class UserManager extends OidcClient {
                             if (!atSuccess && !rtSuccess) {
                                 Log.debug("UserManager.revokeAccessToken: no need to revoke due to no token(s), or JWT format");
                             }
-                            
+
                             return atSuccess || rtSuccess;
                         });
                 });
