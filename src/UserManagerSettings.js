@@ -13,6 +13,7 @@ import { SigninRequest } from './SigninRequest.js';
 const DefaultAccessTokenExpiringNotificationTime = 60;
 const DefaultCheckSessionInterval = 2000;
 const DefaultPauseSilentRenewIdleTimeout = 60 * 1000;
+const DefaultSilentRenewRetryInterval = 5 * 1000;
 
 export class UserManagerSettings extends OidcClientSettings {
     constructor({
@@ -24,6 +25,7 @@ export class UserManagerSettings extends OidcClientSettings {
         silentRequestTimeout,
         automaticSilentRenew = false,
         pauseSilentRenewIdleTimeout = DefaultPauseSilentRenewIdleTimeout,
+        silentRenewRetryInterval = DefaultSilentRenewRetryInterval,
         validateSubOnSilentRenew = false,
         includeIdTokenInSilentRenew = true,
         monitorSession = true,
@@ -47,6 +49,7 @@ export class UserManagerSettings extends OidcClientSettings {
 
         this._silent_redirect_uri = silent_redirect_uri;
         this._silentRequestTimeout = silentRequestTimeout;
+        this._silentRenewRetryInterval = silentRenewRetryInterval;
         this._automaticSilentRenew = automaticSilentRenew;
         this._pauseSilentRenewIdleTimeout = pauseSilentRenewIdleTimeout;
         this._validateSubOnSilentRenew = validateSubOnSilentRenew;
@@ -91,8 +94,11 @@ export class UserManagerSettings extends OidcClientSettings {
     get silent_redirect_uri() {
         return this._silent_redirect_uri;
     }
-     get silentRequestTimeout() {
+    get silentRequestTimeout() {
         return this._silentRequestTimeout;
+    }
+    get silentRenewRetryInterval() {
+        return this._silentRenewRetryInterval;
     }
     get automaticSilentRenew() {
         return this._automaticSilentRenew;

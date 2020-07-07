@@ -29,7 +29,7 @@ export class UserManager extends OidcClient {
         super(settings);
 
         this._events = new UserManagerEvents(settings);
-        this._silentRenewService = new SilentRenewServiceCtor(this, IdleTimer(settings.pauseSilentRenewIdleTimeout));
+        this._silentRenewService = new SilentRenewServiceCtor(this, IdleTimer(settings.pauseSilentRenewIdleTimeout), settings.silentRenewRetryInterval);
 
         // order is important for the following properties; these services depend upon the events.
         if (this.settings.automaticSilentRenew) {

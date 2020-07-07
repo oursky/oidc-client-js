@@ -5,9 +5,10 @@ import { Log } from './Log.js';
 
 export class SilentRenewService {
 
-    constructor(userManager, idleTimerCtor) {
+    constructor(userManager, idleTimerCtor, retryInterval) {
         this._userManager = userManager;
         this._idleTimerCtor = idleTimerCtor;
+        this._retryInterval = retryInterval;
         this._initState();
     }
 
@@ -56,10 +57,14 @@ export class SilentRenewService {
             this._idleTimer.unbind();
             delete this._idleTimer;
         }
+
+        if (this._retryHandle) {
+            clearTimeout(this._retryHandle);
+            delete this._retryHandle;
+        }
     }
 
     _tokenExpiring() {
-        // TODO: retry once user is active again
         if (this._paused) {
             Log.debug("SilentRenewService._tokenExpiring: skipped, user idle detected");
             this._expiringDuringPaused = true;
@@ -71,6 +76,11 @@ export class SilentRenewService {
 
     _tokenExpired() {
         this._expiringDuringPaused = false;
+
+        if (this._retryHandle) {
+            clearTimeout(this._retryHandle);
+            delete this._retryHandle;
+        }
     }
 
     _renew() {
@@ -79,6 +89,13 @@ export class SilentRenewService {
         }, err => {
             Log.error("SilentRenewService._tokenExpiring: Error from signinSilent:", err.message);
             this._userManager.events._raiseSilentRenewError(err);
+
+            // schedule a retry
+            if (this._retryInterval > 0) {
+                this._retryHandle = setTimeout(() => {
+                    this._renew();
+                }, this._retryInterval);
+            }
         });
     }
 }
