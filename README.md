@@ -54,3 +54,22 @@ Some initial docs are [here](https://github.com/IdentityModel/oidc-client-js/wik
 ## Feedback, Feature requests, and Bugs
 
 All are welcome on the [issue tracker](https://github.com/IdentityModel/oidc-client-js/issues).
+
+## Releasing a new version
+
+1. Update `version` in `package.json`
+
+2. Update `package-lock.json`
+
+    ```
+    npm i --lockfile-version 1 --package-lock-only
+    ```
+
+3. Pack and upload
+
+    ```
+    npm run build
+    npm pack
+    ```
+
+    Upload the packed file `oup-oidc-client-{version}.tgz` to npm registry.
