@@ -11,14 +11,23 @@ Also included is support for user session and access token management.
 
 Node.js v4.4 or later required.
 
-##### NPM
+##### NPM / Yarn
 
-`npm install oidc-client --save`
+```bash
+$ npm install https://oupc-middle-layer-client.s3-ap-southeast-1.amazonaws.com/oup-oidc-client-1.10.5.tgz --save
+
+# OR 
+
+$ yarn add https://oupc-middle-layer-client.s3-ap-southeast-1.amazonaws.com/oup-oidc-client-1.10.5.tgz
+```
+
+
 
 **NOTE**: if you're not already using [babel-polyfill](https://www.npmjs.com/package/babel-polyfill) make sure you run
 `npm install --save babel-polyfill` as well. Then include it in your build.
 
 ##### CommonJS
+
 If you don't use a package manager or a module loader, then you can get the library from the `dist` folder on github [here](dist).
 
 ## Including in the browser
@@ -60,16 +69,16 @@ All are welcome on the [issue tracker](https://github.com/IdentityModel/oidc-cli
 1. Update `version` in `package.json`
 
 2. Update `package-lock.json`
-
-    ```
-    npm i --lockfile-version 1 --package-lock-only
-    ```
+   
+   ```
+   npm i --lockfile-version 1 --package-lock-only
+   ```
 
 3. Pack and upload
-
-    ```
-    npm run build
-    npm pack
-    ```
-
+   
+   ```
+   npm run build
+   npm pack
+   ```
+   
     Upload the packed file `oup-oidc-client-{version}.tgz` to npm registry.
