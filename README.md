@@ -14,16 +14,14 @@ Node.js v4.4 or later required.
 ##### NPM / Yarn
 
 ```bash
-$ npm install https://oupc-middle-layer-client.s3-ap-southeast-1.amazonaws.com/oup-oidc-client-1.10.5.tgz
+$ npm install https://oupc-middle-layer-client.s3-ap-southeast-1.amazonaws.com/oup-oidc-client-1.10.5.tgz --save
 
 # OR 
 
 $ yarn add https://oupc-middle-layer-client.s3-ap-southeast-1.amazonaws.com/oup-oidc-client-1.10.5.tgz
 ```
 
-To ensure the proprietary package is used, please also run the following command: 
 
-`npm install oidc-client --save`
 
 **NOTE**: if you're not already using [babel-polyfill](https://www.npmjs.com/package/babel-polyfill) make sure you run
 `npm install --save babel-polyfill` as well. Then include it in your build.
