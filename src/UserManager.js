@@ -29,6 +29,7 @@ export class UserManager extends OidcClient {
         super(settings);
 
         this._events = new UserManagerEvents(settings);
+        this._unloadCount = 0;
         this._silentRenewService = new SilentRenewServiceCtor(this, IdleTimer(settings.pauseSilentRenewIdleTimeout), settings.silentRenewRetryInterval);
 
         // order is important for the following properties; these services depend upon the events.
@@ -81,6 +82,7 @@ export class UserManager extends OidcClient {
     }
 
     removeUser() {
+        this._unloadCount++;
         return this.storeUser(null).then(() => {
             Log.info("UserManager.removeUser: user removed from storage");
             this._events.unload();
@@ -162,13 +164,15 @@ export class UserManager extends OidcClient {
         args = Object.assign({}, args);
 
         args.request_type = "si:s";
+        const unloadCount = this._unloadCount;
         // first determine if we have a refresh token, or need to use iframe
         return this._loadUser().then(user => {
             if (user && user.refresh_token) {
                 args.refresh_token = user.refresh_token;
-                return this._useRefreshToken(args);
+                return this._useRefreshToken(args, unloadCount);
             }
             else {
+                args.unloadCount = unloadCount;
                 args.id_token_hint = args.id_token_hint || (this.settings.includeIdTokenInSilentRenew && user && user.id_token);
                 if (user && this._settings.validateSubOnSilentRenew) {
                     Log.debug("UserManager.signinSilent, subject prior to silent renew: ", user.profile.sub);
@@ -179,7 +183,7 @@ export class UserManager extends OidcClient {
         });
     }
 
-    _useRefreshToken(args = {}) {
+    _useRefreshToken(args = {}, unloadCount) {
         return this._tokenClient.exchangeRefreshToken(args).then(result => {
             if (!result) {
                 Log.error("UserManager._useRefreshToken: No response returned from token endpoint");
@@ -191,6 +195,9 @@ export class UserManager extends OidcClient {
             }
 
             return this._loadUser().then(user => {
+                if (this._isUnloadedSince(unloadCount)) {
+                    return this._rejectUnloaded();
+                }
                 if (user) {
                     let idTokenValidation = Promise.resolve();
                     if (result.id_token) {
@@ -204,6 +211,9 @@ export class UserManager extends OidcClient {
                         user.refresh_token = result.refresh_token || user.refresh_token;
                         user.expires_in = result.expires_in;
 
+                        if (this._isUnloadedSince(unloadCount)) {
+                            return this._rejectUnloaded();
+                        }
                         return this.storeUser(user).then(()=>{
                             this._events.load(user);
                             return user;
@@ -412,6 +422,9 @@ export class UserManager extends OidcClient {
                 }
             }
 
+            if (this._isUnloadedSince(args.unloadCount)) {
+                return this._rejectUnloaded();
+            }
             return this.storeUser(user).then(() => {
                 Log.debug("UserManager._signinEnd: user stored");
 
@@ -420,6 +433,13 @@ export class UserManager extends OidcClient {
                 return user;
             });
         });
+    }
+    _isUnloadedSince(unloadCount) {
+        return unloadCount !== undefined && unloadCount !== this._unloadCount;
+    }
+    _rejectUnloaded() {
+        Log.debug("UserManager._rejectUnloaded: user removed during silent signin, dropping result");
+        return Promise.reject(new Error("user_unloaded"));
     }
     _signinCallback(url, navigator) {
         Log.debug("UserManager._signinCallback");

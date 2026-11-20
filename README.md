@@ -14,11 +14,11 @@ Node.js v4.4 or later required.
 ##### NPM / Yarn
 
 ```bash
-$ npm install https://oupc-middle-layer-client.s3-ap-southeast-1.amazonaws.com/oup-oidc-client-1.10.7.tgz --save
+$ npm install https://oupc-middle-layer-client.s3-ap-southeast-1.amazonaws.com/oup-oidc-client-1.10.8.tgz --save
 
 # OR 
 
-$ yarn add https://oupc-middle-layer-client.s3-ap-southeast-1.amazonaws.com/oup-oidc-client-1.10.7.tgz
+$ yarn add https://oupc-middle-layer-client.s3-ap-southeast-1.amazonaws.com/oup-oidc-client-1.10.8.tgz
 ```
 
 

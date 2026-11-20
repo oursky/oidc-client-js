@@ -7,6 +7,7 @@ import { UserInfoService } from './UserInfoService.js';
 import { TokenClient } from './TokenClient.js';
 import { ErrorResponse } from './ErrorResponse.js';
 import { JoseUtil } from './JoseUtil.js';
+import { SigninRequest } from './SigninRequest.js';
 
 const ProtocolClaims = ["nonce", "at_hash", "iat", "nbf", "exp", "aud", "iss", "c_hash"];
 
@@ -110,12 +111,15 @@ export class ResponseValidator {
             return Promise.reject(new ErrorResponse(response));
         }
 
-        if (state.response_type === 'id_token' && !response.id_token) {
+        // A state stored by 1.10.1 has no response_type, and its nonce marks an OIDC request.
+        const isOidc = state.response_type ? SigninRequest.isOidc(state.response_type) : !!state.nonce;
+
+        if (isOidc && !response.id_token) {
             Log.error("ResponseValidator._processSigninParams: Expecting id_token in response");
             return Promise.reject(new Error("No id_token in response"));
         }
 
-        if (state.response_type !== 'id_token' && response.id_token) {
+        if (!isOidc && response.id_token) {
             Log.error("ResponseValidator._processSigninParams: Not expecting id_token in response");
             return Promise.reject(new Error("Unexpected id_token in response"));
         }

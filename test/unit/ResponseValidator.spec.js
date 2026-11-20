@@ -386,6 +386,27 @@ describe("ResponseValidator", function () {
 
         });
 
+        it("should accept id_token for response_type id_token token", function () {
+            stubState.response_type = "id_token token";
+            stubResponse.id_token = id_token;
+            return subject._processSigninParams(stubState, stubResponse);
+        });
+
+        it("should accept id_token for response_type code id_token", function () {
+            stubState.response_type = "code id_token";
+            stubState.code_verifier = "verifier";
+            stubResponse.id_token = id_token;
+            stubResponse.code = "code";
+            return subject._processSigninParams(stubState, stubResponse);
+        });
+
+        it("should expect id_token by nonce when state has no response_type", function () {
+            delete stubState.response_type;
+            return subject._processSigninParams(stubState, stubResponse).then(() => {
+                throw new Error("should have rejected");
+            }, err => err.message.should.equal("No id_token in response"));
+        });
+
         it("should fail if request was not OIDC but id_token in response", function (done) {
 
             stubState.response_type = 'code';

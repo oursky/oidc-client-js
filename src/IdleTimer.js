@@ -25,6 +25,9 @@ function throttle(fn, delay) {
 }
 
 export const IdleTimer = timeout => (onIdle, onActive) => {
+  if (!(timeout > 0)) {
+    return { unbind: () => {} };
+  }
   let isActive = true;
   let time;
   const resetTimer = throttle(() => {

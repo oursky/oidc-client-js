@@ -155,4 +155,97 @@ describe("UserManager", function () {
         })
     });
 
+    describe("stale silent signin", function () {
+        let loadedCount;
+        let storedCount;
+        let releaseSignin;
+
+        function deferred() {
+            let resolve;
+            let start;
+            const promise = new Promise(r => { resolve = r; });
+            const started = new Promise(r => { start = r; });
+            return { promise, resolve, started, start };
+        }
+
+        beforeEach(function () {
+            settings.silent_redirect_uri = "http://client/silent_callback";
+            subject = new UserManager(settings);
+            loadedCount = 0;
+            storedCount = 0;
+            subject.events.addUserLoaded(() => { loadedCount++; });
+            const set = stubUserStore.set.bind(stubUserStore);
+            stubUserStore.set = (key, value) => { storedCount++; return set(key, value); };
+            subject.processSigninResponse = () => Promise.resolve({ profile: { sub: "sub" }, access_token: "at" });
+            const hold = deferred();
+            releaseSignin = hold.resolve;
+            subject._signin = (args) => hold.promise.then(() => subject._signinEnd("url", args));
+        });
+
+        function expectUnloaded(promise) {
+            return promise.then(() => { throw new Error("should have rejected"); }, err => {
+                err.message.should.equal("user_unloaded");
+                loadedCount.should.equal(0);
+                storedCount.should.equal(0);
+            });
+        }
+
+        it("should reject an iframe signin that finishes after removeUser", function () {
+            const signin = subject.signinSilent();
+            return Promise.resolve().then(() => subject.removeUser()).then(() => {
+                releaseSignin();
+                return expectUnloaded(signin);
+            });
+        });
+
+        it("should reject a refresh token signin that finishes after removeUser", function () {
+            stubUserStore.item = new User({ id_token: "id_token", refresh_token: "rt", profile: { sub: "sub" } }).toStorageString();
+            subject._tokenClient.exchangeRefreshToken = () => Promise.resolve({ access_token: "at2", id_token: "id_token2" });
+            const validation = deferred();
+            subject._validateIdTokenFromTokenRefreshToken = () => { validation.start(); return validation.promise; };
+            const signin = subject.signinSilent();
+            return validation.started.then(() => subject.removeUser()).then(() => {
+                validation.resolve();
+                return expectUnloaded(signin);
+            });
+        });
+
+        it("should not send unloadCount to the token endpoint", function () {
+            stubUserStore.item = new User({ id_token: "id_token", refresh_token: "rt", profile: { sub: "sub" } }).toStorageString();
+            let tokenArgs;
+            subject._tokenClient.exchangeRefreshToken = (args) => { tokenArgs = args; return Promise.resolve({ access_token: "at2" }); };
+            return subject.signinSilent().then(() => {
+                tokenArgs.refresh_token.should.equal("rt");
+                tokenArgs.should.not.have.property("unloadCount");
+            });
+        });
+
+        it("should reject a refresh token signin when removeUser finishes during the exchange", function () {
+            stubUserStore.remove = () => { delete stubUserStore.item; return Promise.resolve(); };
+            stubUserStore.item = new User({ id_token: "id_token", refresh_token: "rt", profile: { sub: "sub" } }).toStorageString();
+            const exchange = deferred();
+            subject._tokenClient.exchangeRefreshToken = () => { exchange.start(); return exchange.promise; };
+            const signin = subject.signinSilent();
+            return exchange.started.then(() => subject.removeUser()).then(() => {
+                exchange.resolve({ access_token: "at2" });
+                return expectUnloaded(signin);
+            });
+        });
+
+        it("should store a silent signin with no removeUser", function () {
+            const signin = subject.signinSilent();
+            releaseSignin();
+            return signin.then(user => {
+                user.access_token.should.equal("at");
+                loadedCount.should.equal(1);
+                storedCount.should.equal(1);
+            });
+        });
+
+        it("should store a redirect callback after removeUser", function () {
+            return subject.removeUser()
+                .then(() => subject.signinRedirectCallback("http://client/callback"))
+                .then(() => loadedCount.should.equal(1));
+        });
+    });
 });
